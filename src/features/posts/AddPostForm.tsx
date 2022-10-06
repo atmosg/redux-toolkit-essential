@@ -1,12 +1,12 @@
-import { nanoid } from "@reduxjs/toolkit";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { postAdded } from "./postsSlice";
+import { addNewPost } from "./postsSlice";
 
 export const AddPostForm = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
+  const [addRequestStatus, setAddRequestStatus] = useState("idel");
 
   const dispatch = useAppDispatch();
   const users = useAppSelector((state) => state.users);
@@ -17,15 +17,32 @@ export const AddPostForm = () => {
     setContent(e.target.value);
   const onAuthorChanged = (e: any) => setUserId(e.target.value);
 
-  const onSavePostClicked = () => {
-    if (title && content) {
-      dispatch(postAdded(title, content, userId));
-      setTitle("");
-      setContent("");
+  const canSave =
+    [title, content, userId].every(Boolean) && addRequestStatus === "idle";
+
+  const onSavePostClicked = async () => {
+    if (canSave) {
+      try {
+        setAddRequestStatus("pending");
+        await dispatch(
+          addNewPost({
+            title,
+            content,
+            user: userId,
+          })
+        ).unwrap();
+
+        setTitle("");
+        setContent("");
+        setUserId("");
+      } catch (err) {
+        console.error("포스트 저장 실패: ", err);
+      } finally {
+        setAddRequestStatus("idle");
+      }
     }
   };
 
-  const canSave = [title, content, userId].every((val) => Boolean(val));
   const usersOptions = users.map((user) => (
     <option key={user.id} value={user.id}>
       {user.name}
